@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Sloppy Music Reader</title>
+<title>Sloppy reader</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600&family=Ledger&family=Noto+Music&display=swap" rel="stylesheet">
 <style>
@@ -510,14 +510,14 @@ h1 {
 <body>
 <!-- Header: logo and theme toggle -->
 <header><div class="hin">
- <div class="brand serif"><div class="logo" aria-hidden="true">♪</div>Sloppy Music Reader</div>
+ <div class="brand serif"><div class="logo" aria-hidden="true">♪</div>Sloppy reader</div>
  <button class="round" id="theme" aria-label="Switch theme">☼</button>
 </div></header>
 <!-- Main layout: intro, controls and question card; the session panel sits
      beside them on wide screens -->
 <main class="layout">
  <p class="kicker" id="kicker">Note reading · Treble clef</p>
- <h1 class="serif">Name the note</h1>
+ <h1 class="serif">Name that note</h1>
  <p class="lede">Choose the letter that matches the note on the staff. Difficult notes will return more often as you practice.</p>
  <!-- Controls: clef, settings and MIDI -->
  <div class="controls">
@@ -597,6 +597,10 @@ const CAN_FLATTEN = [1, 2, 4, 5, 6];   // D E G A B
 /* Names of the 12 pitch classes, used to turn a MIDI key into a note name. */
 const PITCH_SHARPS = ["C", "C♯", "D", "D♯", "E", "F", "F♯", "G", "G♯", "A", "A♯", "B"];
 const PITCH_FLATS  = ["C", "D♭", "D", "E♭", "E", "F", "G♭", "G", "A♭", "A", "B♭", "B"];
+
+/* Share of questions drawn from notes beyond the five staff lines (the
+   ledger-line area). The rest come from notes on or between the staff lines. */
+const LEDGER_SHARE = 0.35;
 
 const STREAK_AWARDS = [[10, "Warm-up"], [25, "On a roll"], [50, "Virtuoso"], [100, "Maestro"]];
 const NEXT_DELAY = { right: 700, wrong: 1600 };   // ms before the next question
@@ -754,20 +758,24 @@ function drawStaff(d, acc) {
 /* 6. CHOOSING NOTES ------------------------------------------------------- */
 
 /* Pick a random note for the current clef, favouring notes with a higher
-   weight (the ones missed recently). Never the same note twice in a row. */
+   weight (the ones missed recently). Never the same note twice in a row.
+   First a group is chosen (65% inside the staff,
+   35% beyond it), then a note by weight within that group. */
 function pickNote() {
-  const { min, max } = CLEFS[state.clef];
-  const choices = [];                                      // [{ d, acc }, weight]
+  const { min, max, bottom } = CLEFS[state.clef];
+  const inside = [], outside = [];                                      // [{ d, acc }, weight]
 
   for (let d = min; d <= max; d++) {
     for (const acc of state.accidentals ? [0, 1, -1] : [0]) {
       if (acc > 0 && !CAN_SHARPEN.includes(d % 7)) continue;
       if (acc < 0 && !CAN_FLATTEN.includes(d % 7)) continue;
       if (noteKey(d, acc) === state.lastKey) continue;
-      choices.push([{ d, acc }, weightOf(d, acc)]);
+      const step = d - bottom;                       // 0 = bottom staff line, 8 = top line
+      (step >= 0 && step <= 8 ? inside : outside).push([{ d, acc }, weightOf(d, acc)]);
     }
   }
 
+  const choices = Math.random() < LEDGER_SHARE ? outside : inside;
   let roll = Math.random() * choices.reduce((sum, c) => sum + c[1], 0);
   for (const [note, weight] of choices) {
     roll -= weight;
