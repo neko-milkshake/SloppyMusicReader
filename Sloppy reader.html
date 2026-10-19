@@ -1,0 +1,1066 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Sloppy reader</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600&family=Ledger&family=Noto+Music&display=swap" rel="stylesheet">
+<style>
+/* Sloppy reader styles. Colours come from the tokens below, so both
+   themes share every rule. */
+/* ---- Colour tokens: dark theme (default) ---- */
+:root {
+  --bg: #17151d;
+  --panel: #1e1c26;
+  --tile: #262431;
+  --line: #32303e;
+  --ink: #f1eef8;
+  --mute: #9a95aa;
+  --acc: #b9a6f0;
+  --accbg: #37304f;
+  --go: #5f8f6e;
+  --gotxt: #fff;
+  --ok: #6fc18a;
+  --bad: #e27d85;
+  --staff: #8d88a0;
+  box-sizing: border-box;
+  padding-top: env(safe-area-inset-top,0px);
+  padding-bottom: env(safe-area-inset-bottom,0px);
+  color-scheme: dark;
+}
+
+/* ---- Colour tokens: light theme ---- */
+:root[data-theme="light"] {
+  --bg: #f6f4fa;
+  --panel: #fff;
+  --tile: #f1eef8;
+  --line: #ddd8e8;
+  --ink: #201c2c;
+  --mute: #6d6780;
+  --acc: #6b4fc4;
+  --accbg: #e6defa;
+  --go: #3f7a54;
+  --ok: #2d8a52;
+  --bad: #c4414c;
+  --staff: #6d6780;
+  --btn-line: #c3bcd6;
+  color-scheme: light;
+}
+
+/* ---- Base ---- */
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+}
+
+body {
+  background: var(--bg);
+  color: var(--ink);
+  font: 400 15px/1.5 "DM Sans",system-ui,sans-serif;
+  min-height: 100%;
+}
+
+.serif {
+  font-family: "Ledger",Georgia,serif;
+  font-weight: 400;
+}
+
+/* ---- Header ---- */
+header {
+  border-bottom: 1px solid var(--line);
+}
+
+.hin {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  max-width: 1080px;
+  margin: 0 auto;
+  padding: 16px 24px;
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 26px;
+}
+
+.logo {
+  width: 34px;
+  height: 34px;
+  border-radius: 10px;
+  background: #6b4fc4;
+  color: #fff;
+  display: grid;
+  place-items: center;
+  font-size: 18px;
+}
+
+button {
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+}
+
+.round {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  border: 1px solid var(--line);
+  background: var(--panel);
+  display: grid;
+  place-items: center;
+}
+
+:focus-visible {
+  outline: 2px solid var(--acc);
+  outline-offset: 2px;
+}
+
+/* ---- Page layout: one column, two columns on wide screens ---- */
+.layout {
+  max-width: 1080px;
+  margin: 0 auto;
+  padding: 32px 24px 56px;
+  display: grid;
+  grid-template-columns: minmax(0,1fr);
+}
+
+@media (min-width: 900px) {
+  .hin {
+    padding: 16px 40px;
+  }
+  .layout {
+    grid-template-columns: minmax(0,1fr) 320px;
+    column-gap: 32px;
+    padding: 40px 40px 64px;
+  }
+  .layout>* {
+    grid-column: 1;
+  }
+  .layout>section:last-of-type {
+    grid-column: 2;
+    grid-row: 1/span 5;
+    position: sticky;
+    top: 24px;
+    align-self: start;
+  }
+}
+
+/* ---- Intro text and controls ---- */
+.kicker {
+  color: var(--acc);
+  font-size: 13px;
+  font-weight: 500;
+  margin: 0 0 8px;
+}
+
+h1 {
+  font-size: 40px;
+  line-height: 1.1;
+  margin: 0 0 14px;
+  letter-spacing: -.01em;
+}
+
+.lede {
+  color: var(--mute);
+  margin: 0 0 24px;
+  max-width: 46ch;
+}
+
+.controls {
+  display: flex;
+  gap: 16px;
+  align-items: center;
+  flex-wrap: wrap;
+  margin-bottom: 28px;
+}
+
+.seg {
+  display: flex;
+  padding: 4px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: var(--panel);
+}
+
+.seg button {
+  border: 0;
+  background: none;
+  padding: 9px 16px;
+  border-radius: 10px;
+  color: var(--mute);
+  font-weight: 500;
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.seg button[aria-pressed=true] {
+  background: var(--tile);
+  color: var(--ink);
+}
+
+.seg .g {
+  font-family: "Noto Music",serif;
+  font-size: 20px;
+  line-height: 1;
+}
+
+.start {
+  border: 0;
+  background: var(--go);
+  color: var(--gotxt);
+  padding: 14px 20px;
+  border-radius: 12px;
+  font-weight: 600;
+}
+
+.start[data-on=true] {
+  background: var(--tile);
+  color: var(--ink);
+  border: 1px solid var(--line);
+}
+
+.qhead .start {
+  padding: 9px 18px;
+  font-size: 14px;
+}
+
+/* ---- Setting toggles (accidentals, Do Re Mi, MIDI) ---- */
+.tog {
+  border: 1px solid var(--line);
+  background: var(--panel);
+  border-radius: 12px;
+  padding: 13px 16px;
+  color: var(--mute);
+  font-weight: 500;
+}
+
+.tog[aria-pressed=true] {
+  color: var(--ink);
+  border-color: var(--acc);
+}
+
+/* ---- Question card ---- */
+.card {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 28px;
+  padding: 20px 20px 24px;
+  margin-bottom: 24px;
+}
+
+.qhead {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+}
+
+.hear {
+  border: 1px solid var(--line);
+  background: none;
+  border-radius: 999px;
+  padding: 6px 14px;
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.time {
+  font-variant-numeric: tabular-nums;
+  color: var(--mute);
+  margin-left: 8px;
+  font-size: 14px;
+}
+
+/* ---- Staff ---- */
+#staff {
+  display: block;
+  width: 100%;
+  max-width: 460px;
+  margin: 20px auto 0;
+  height: auto;
+}
+
+.prompt {
+  text-align: center;
+  color: var(--mute);
+  font-weight: 500;
+  margin: 4px 0 20px;
+}
+
+/* ---- Answer buttons ---- */
+.answers {
+  display: grid;
+  grid-template-columns: repeat(4,1fr);
+  gap: 10px;
+}
+
+@media (min-width: 520px) {
+  .answers {
+    grid-template-columns: repeat(7,1fr);
+  }
+}
+
+.answers.sol button {
+  font-size: 20px;
+}
+
+.answers button {
+  background: var(--tile);
+  border: 1px solid var(--btn-line,var(--line));
+  border-radius: 14px;
+  padding: 14px 0 10px;
+  font-size: 26px;
+  font-family: "Ledger",Georgia,serif;
+  position: relative;
+  transition: background .15s,border-color .15s;
+}
+
+.answers button small {
+  display: block;
+  font: 500 11px "DM Sans",sans-serif;
+  color: var(--mute);
+  margin-top: 2px;
+}
+
+.answers button:hover:not(:disabled) {
+  border-color: var(--acc);
+}
+
+.answers button:disabled {
+  opacity: .45;
+  cursor: default;
+}
+
+:root[data-theme="light"] .answers button {
+  box-shadow: 0 1px 2px rgba(32,28,44,.14);
+}
+
+:root[data-theme="light"] .answers button:disabled {
+  opacity: 1;
+}
+
+.answers button.ok {
+  background: color-mix(in srgb,var(--ok) 28%,var(--tile));
+  border-color: var(--ok);
+  opacity: 1;
+}
+
+.answers button.bad {
+  background: color-mix(in srgb,var(--bad) 28%,var(--tile));
+  border-color: var(--bad);
+  opacity: 1;
+}
+
+/* ---- Feedback message and tip ---- */
+.msg {
+  min-height: 24px;
+  text-align: center;
+  margin: 16px 0 0;
+  font-weight: 500;
+}
+
+.msg.ok {
+  color: var(--ok);
+}
+
+.msg.bad {
+  color: var(--bad);
+}
+
+.tip {
+  text-align: center;
+  color: var(--mute);
+  font-size: 13px;
+  margin: 6px 0 0;
+}
+
+/* ---- Session panel: statistics ---- */
+.sh {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 18px;
+}
+
+.sh h2 {
+  font-size: 26px;
+  margin: 0;
+}
+
+.stats {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+.stat {
+  background: var(--tile);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  padding: 12px 14px;
+}
+
+.stat.wide {
+  grid-column: 1/-1;
+}
+
+.stat span {
+  display: block;
+  color: var(--mute);
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.stat b {
+  font: 400 30px "Ledger",Georgia,serif;
+}
+
+/* ---- Streak achievements ---- */
+.ach {
+  border-top: 1px solid var(--line);
+  margin-top: 24px;
+  padding-top: 20px;
+}
+
+.ach h3 {
+  display: flex;
+  justify-content: space-between;
+  margin: 0 0 12px;
+  font-size: 14px;
+  color: var(--mute);
+  font-weight: 500;
+}
+
+.achs {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+.a {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 10px 12px;
+  opacity: .6;
+}
+
+.a i {
+  font-style: normal;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: var(--tile);
+  display: grid;
+  place-items: center;
+  font-size: 13px;
+  color: var(--mute);
+  flex: none;
+}
+
+.a b {
+  display: block;
+  font-size: 14px;
+}
+
+.a small {
+  color: var(--mute);
+  font-size: 12px;
+}
+
+.a.on {
+  opacity: 1;
+  border-color: var(--acc);
+}
+
+.a.on i {
+  background: var(--acc);
+  color: var(--bg);
+  font-weight: 600;
+}
+
+/* ---- Small screens and reduced motion ---- */
+@media (max-width: 420px) {
+  .answers {
+    grid-template-columns: repeat(4,1fr);
+  }
+  h1 {
+    font-size: 34px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * {
+    transition: none!important;
+  }
+}
+</style>
+</head>
+<body>
+<!-- Header: logo and theme toggle -->
+<header><div class="hin">
+ <div class="brand serif"><div class="logo" aria-hidden="true">♪</div>Sloppy reader</div>
+ <button class="round" id="theme" aria-label="Switch theme">☼</button>
+</div></header>
+<!-- Main layout: intro, controls and question card; the session panel sits
+     beside them on wide screens -->
+<main class="layout">
+ <p class="kicker" id="kicker">Note reading · Treble clef</p>
+ <h1 class="serif">Name that note</h1>
+ <p class="lede">Choose the letter that matches the note on the staff. Difficult notes will return more often as you practice.</p>
+ <!-- Controls: clef, settings and MIDI -->
+ <div class="controls">
+  <div class="seg" role="group" aria-label="Clef">
+   <button id="c-treble" aria-pressed="true"><span class="g">𝄞</span>Treble</button>
+   <button id="c-bass" aria-pressed="false"><span class="g">𝄢</span>Bass</button>
+  </div>
+  <button class="tog" id="acc-tog" aria-pressed="true">♯ Accidentals</button>
+  <button class="tog" id="sol" aria-pressed="false">Do Re Mi</button>
+  <button class="tog" id="midi" aria-pressed="false">🎹 Connect MIDI</button>
+  <span class="tip" id="midi-st" style="margin:0;text-align:left"></span>
+ </div>
+
+ <!-- Question card: Start button, staff, answer buttons and feedback -->
+ <section class="card" aria-live="polite">
+  <div class="qhead">
+   <button class="start" id="start" data-on="false">▷&nbsp; Start practice</button>
+   <span><button class="hear" id="hear">🔈 Hear note</button><span class="time" id="time">0.0s</span></span>
+  </div>
+  <svg id="staff" viewBox="0 0 320 220" role="img" aria-label="A note on the staff"></svg>
+  <p class="prompt">Which note is this?</p>
+  <div class="answers" id="answers"></div>
+  <p class="msg" id="msg"></p>
+  <p class="tip">Tip: use the letter keys on your keyboard</p>
+ </section>
+
+ <!-- Session panel: statistics and streak achievements -->
+ <section class="card">
+  <div class="sh"><h2 class="serif">This session</h2><button class="round" id="reset" aria-label="Reset session" title="Reset session">⚡</button></div>
+  <div class="stats">
+   <div class="stat"><span>Notes read</span><b id="s-n">0</b></div>
+   <div class="stat"><span>Accuracy</span><b id="s-acc">100%</b></div>
+   <div class="stat"><span>Avg. time</span><b id="s-avg">—</b></div>
+   <div class="stat"><span>Current streak</span><b id="s-cur">0</b></div>
+   <div class="stat wide"><span>Max streak</span><b id="s-max">0</b></div>
+  </div>
+  <div class="ach">
+   <h3><span>Streak achievements</span><span id="a-count">0/4</span></h3>
+   <div class="achs" id="achs"></div>
+  </div>
+ </section>
+</main>
+
+<!-- Application logic (sections are listed at the top of the script) -->
+<script>
+/* ==========================================================================
+   SLOPPY READER: note-reading trainer
+   --------------------------------------------------------------------------
+    1. Constants           5. Staff drawing       9. Statistics
+    2. State               6. Choosing notes     10. Controls and keyboard
+    3. Small helpers       7. Sound              11. MIDI input
+    4. Theme               8. Quiz flow          12. Startup
+   ========================================================================== */
+
+
+/* 1. CONSTANTS ------------------------------------------------------------ */
+
+const LETTERS = ["C", "D", "E", "F", "G", "A", "B"];
+const SOLFEGE = ["Do", "Re", "Mi", "Fa", "Sol", "La", "Ti"];
+const SEMITONES = [0, 2, 4, 5, 7, 9, 11];   // semitones above C for each letter
+const SHARP = "♯";
+const FLAT = "♭";
+
+/* A note is stored as a "diatonic number": d = octave * 7 + letter index
+   (C0 = 0, E4 = 30). For each clef, `bottom` is the note on the bottom staff
+   line, and `min` / `max` are the lowest and highest notes that can be asked
+   (up to three ledger lines above or below the staff). */
+const CLEFS = {
+  treble: { name: "Treble", bottom: 30, min: 24, max: 44 },   // F3 to E6
+  bass:   { name: "Bass",   bottom: 18, min: 12, max: 32 },   // A1 to G4
+};
+
+/* Letters allowed to carry an accidental (no E♯, B♯, F♭ or C♭). */
+const CAN_SHARPEN = [0, 1, 3, 4, 5];   // C D F G A
+const CAN_FLATTEN = [1, 2, 4, 5, 6];   // D E G A B
+
+/* Names of the 12 pitch classes, used to turn a MIDI key into a note name. */
+const PITCH_SHARPS = ["C", "C♯", "D", "D♯", "E", "F", "F♯", "G", "G♯", "A", "A♯", "B"];
+const PITCH_FLATS  = ["C", "D♭", "D", "E♭", "E", "F", "G♭", "G", "A♭", "A", "B♭", "B"];
+
+const STREAK_AWARDS = [[10, "Warm-up"], [25, "On a roll"], [50, "Virtuoso"], [100, "Maestro"]];
+const NEXT_DELAY = { right: 700, wrong: 1600 };   // ms before the next question
+
+
+/* 2. STATE ---------------------------------------------------------------- */
+
+const state = {
+  clef: "treble",
+  running: false,                 // has practice been started?
+  locked: true,                   // true while feedback shows; ignores answers
+  accidentals: true,              // setting: include sharps and flats
+  solfege: false,                 // setting: Do Re Mi instead of C D E
+  note: { d: 30, acc: 0 },        // the current question (acc: 1 sharp, -1 flat)
+  lastKey: null,                  // key of the previous question, to avoid repeats
+  startedAt: 0,                   // when the current question appeared (ms)
+};
+
+const newSession = () => ({ notes: 0, correct: 0, times: [], streak: 0, best: 0 });
+let session = newSession();
+
+/* How often each note should appear. Missed notes get a bigger weight, so
+   they come back more often. Saved in the browser between visits. */
+let weights = {};
+let advanceTimer = null;          // pending "go to next question"
+let clockTimer = null;            // updates the on-screen timer
+
+
+/* 3. SMALL HELPERS -------------------------------------------------------- */
+
+const $ = id => document.getElementById(id);
+const answerButtons = () => $("answers").querySelectorAll("button");
+
+/* Browser storage can be unavailable, so every access is guarded. */
+function readStore(name) {
+  try { return localStorage.getItem(name); } catch (e) { return null; }
+}
+function writeStore(name, value) {
+  try { localStorage.setItem(name, value); } catch (e) { /* ignore */ }
+}
+
+const letterOf = d => LETTERS[d % 7];
+const accSymbol = acc => (acc > 0 ? SHARP : acc < 0 ? FLAT : "");
+const displayName = letter => (state.solfege ? SOLFEGE[LETTERS.indexOf(letter)] : letter);
+const noteName = (d, acc) => displayName(letterOf(d)) + accSymbol(acc);
+
+const midiNumber = (d, acc) => 12 * (Math.floor(d / 7) + 1) + SEMITONES[d % 7] + acc;
+const noteKey = (d, acc) => `${state.clef}:${d}:${acc}`;
+const weightOf = (d, acc) => weights[noteKey(d, acc)] ?? (acc ? 0.45 : 1);
+
+/* The answer pitch closest to the question note, so that pressing an answer
+   button plays a sound near the note on the staff. */
+function nearestPitch(letter, acc) {
+  const target = midiNumber(state.note.d, state.note.acc);
+  const pitchClass = (SEMITONES[LETTERS.indexOf(letter)] + acc + 12) % 12;
+  const below = target - (((target - pitchClass) % 12) + 12) % 12;
+  return target - below <= below + 12 - target ? below : below + 12;
+}
+
+
+/* 4. THEME ---------------------------------------------------------------- */
+
+function applyTheme(theme, remember) {
+  document.documentElement.dataset.theme = theme;
+  if (remember) writeStore("sr-theme", theme);
+}
+applyTheme(readStore("sr-theme") || (matchMedia("(prefers-color-scheme: light)").matches ? "light" : "dark"));
+$("theme").onclick = () =>
+  applyTheme(document.documentElement.dataset.theme === "dark" ? "light" : "dark", true);
+
+
+/* 5. STAFF DRAWING -------------------------------------------------------- */
+/* The staff is an SVG built from strings. Vertical units: one staff space is
+   `sp` px, and a "step" is half a space (one line or space on the staff). */
+
+const svgLine = (x1, y1, x2, y2, color = "var(--staff)", width = 1.2) =>
+  `<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="${color}" stroke-width="${width}"/>`;
+
+/* Measure a clef glyph's real ink size so it can be scaled and placed exactly:
+   it should span from `top` to `bottom` and start `left` pixels from the edge. */
+function fitGlyph(glyph, top, bottom, left) {
+  const ctx = document.createElement("canvas").getContext("2d");
+  ctx.font = "100px 'Noto Music'";
+  const m = ctx.measureText(glyph);
+  const inkHeight = m.actualBoundingBoxAscent + m.actualBoundingBoxDescent;
+  if (!(inkHeight > 0)) return null;
+  const k = (bottom - top) / inkHeight;
+  return {
+    size: 100 * k,
+    x: left + m.actualBoundingBoxLeft * k,
+    y: top + m.actualBoundingBoxAscent * k,
+  };
+}
+
+function clefSvg(clef, bottom, sp) {
+  const top = bottom - 4 * sp;                       // y of the top staff line
+  const treble = clef === "treble";
+  const glyph = treble ? "𝄞" : "𝄢";
+  const fit = treble
+    ? fitGlyph(glyph, top - 0.5 * sp, bottom + 1.5 * sp, 30)   // about 6 spaces tall
+    : fitGlyph(glyph, top, top + 3.5 * sp, 30);                // top line down 3.5 spaces
+  const place = fit
+    ? `x="${fit.x}" y="${fit.y}" font-size="${fit.size}"`
+    : `x="26" y="${treble ? bottom - sp : top + 2 * sp}" font-size="${treble ? 80 : 60}"`;   // fallback
+  return `<text ${place} font-family="'Noto Music',serif" fill="var(--acc)">${glyph}</text>`;
+}
+
+/* Sharp or flat sign, drawn with paths so it needs no font. (x, y) is the
+   centre of the sign. Natural notes have no sign. */
+function accidentalSvg(acc, x, y) {
+  const style = 'fill="none" stroke="var(--acc)" stroke-width="2.2" stroke-linecap="round"';
+  if (acc > 0) {
+    return `<path ${style} d="M${x - 3} ${y - 17}V${y + 17}M${x + 4} ${y - 19}V${y + 15}` +
+           `M${x - 8} ${y - 4}L${x + 9} ${y - 8}M${x - 8} ${y + 8}L${x + 9} ${y + 4}"/>`;
+  }
+  if (acc < 0) {
+    return `<path ${style} d="M${x} ${y - 24}V${y + 7}M${x} ${y + 7}C${x + 14} ${y - 1} ${x + 13} ${y - 14} ${x} ${y - 7}"/>`;
+  }
+  return "";
+}
+
+function drawStaff(d, acc) {
+  const sp = 16;                          // staff space
+  const half = sp / 2;                    // one step
+  const bottom = 142;                     // y of the bottom line (staff is centred in the SVG)
+  const left = 14, right = 306;           // staff line ends
+  const noteX = 200;
+
+  const step = d - CLEFS[state.clef].bottom;    // steps above the bottom line (0 = bottom line)
+  const noteY = bottom - step * half;
+  let svg = "";
+
+  for (let i = 0; i < 5; i++) svg += svgLine(left, bottom - i * sp, right, bottom - i * sp);
+  svg += clefSvg(state.clef, bottom, sp);
+
+  /* Ledger lines: every second step beyond the staff, out to the note. */
+  const ledgers = [];
+  for (let k = -2; k >= step; k -= 2) ledgers.push(k);     // below the staff
+  for (let k = 10; k <= step; k += 2) ledgers.push(k);     // above the staff
+  ledgers.forEach(k => { svg += svgLine(noteX - 17, bottom - k * half, noteX + 17, bottom - k * half); });
+
+  /* Stem points up for notes below the middle line, down otherwise. */
+  const stemUp = step < 4;
+  const stemX = stemUp ? noteX + 8.5 : noteX - 8.5;
+  svg += svgLine(stemX, noteY, stemX, stemUp ? noteY - 52 : noteY + 52, "var(--acc)", 2);
+
+  svg += `<ellipse cx="${noteX}" cy="${noteY}" rx="10" ry="7.5" ` +
+         `transform="rotate(-20 ${noteX} ${noteY})" fill="var(--acc)"/>`;
+  svg += accidentalSvg(acc, noteX - 32, noteY);
+
+  $("staff").innerHTML = svg;
+}
+
+
+/* 6. CHOOSING NOTES ------------------------------------------------------- */
+
+/* Pick a random note for the current clef, favouring notes with a higher
+   weight (the ones missed recently). Never the same note twice in a row. */
+function pickNote() {
+  const { min, max } = CLEFS[state.clef];
+  const choices = [];                                      // [{ d, acc }, weight]
+
+  for (let d = min; d <= max; d++) {
+    for (const acc of state.accidentals ? [0, 1, -1] : [0]) {
+      if (acc > 0 && !CAN_SHARPEN.includes(d % 7)) continue;
+      if (acc < 0 && !CAN_FLATTEN.includes(d % 7)) continue;
+      if (noteKey(d, acc) === state.lastKey) continue;
+      choices.push([{ d, acc }, weightOf(d, acc)]);
+    }
+  }
+
+  let roll = Math.random() * choices.reduce((sum, c) => sum + c[1], 0);
+  for (const [note, weight] of choices) {
+    roll -= weight;
+    if (roll <= 0) return note;
+  }
+  return choices[0][0];
+}
+
+
+/* 7. SOUND ---------------------------------------------------------------- */
+/* A piano-like tone built from sine waves (harmonics) that fade at different
+   speeds. No audio files are needed. */
+
+const HARMONICS = [[1, 1], [2, 0.5], [3, 0.3], [4, 0.18], [5, 0.1], [6, 0.06]];   // [multiple, loudness]
+let audioCtx = null;
+let voices = [];                                   // notes currently sounding
+
+/* Fade out anything still ringing so notes do not pile up. */
+function stopVoices(now) {
+  voices.forEach(v => {
+    try {
+      v.master.gain.cancelScheduledValues(now);
+      v.master.gain.setValueAtTime(v.master.gain.value, now);
+      v.master.gain.linearRampToValueAtTime(0, now + 0.12);
+      v.oscillators.forEach(o => o.stop(now + 0.15));
+    } catch (e) { /* already stopped */ }
+  });
+  voices = [];
+}
+
+function play(midi) {
+  try {
+    audioCtx = audioCtx || new (window.AudioContext || window.webkitAudioContext)();
+    if (audioCtx.state === "suspended") audioCtx.resume();
+    const now = audioCtx.currentTime;
+    const freq = 440 * Math.pow(2, (midi - 69) / 12);
+    stopVoices(now);
+
+    const length = Math.max(1, 2.8 - (midi - 36) / 30);        // low notes ring longer
+    const master = audioCtx.createGain();
+    const tone = audioCtx.createBiquadFilter();                // softens high harmonics
+    tone.type = "lowpass";
+    tone.frequency.value = Math.min(9000, freq * 7);
+    master.gain.setValueAtTime(0, now);
+    master.gain.linearRampToValueAtTime(0.55, now + 0.006);    // sharp "hammer" attack
+    master.gain.exponentialRampToValueAtTime(0.0008, now + length);
+    master.connect(tone);
+    tone.connect(audioCtx.destination);
+
+    const oscillators = HARMONICS.map(([multiple, loudness], i) => {
+      const osc = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+      osc.type = "sine";
+      osc.frequency.value = freq * multiple * Math.sqrt(1 + 0.0004 * multiple * multiple);   // slightly stretched, like piano strings
+      gain.gain.setValueAtTime(loudness * 0.5, now);
+      gain.gain.exponentialRampToValueAtTime(0.001 * loudness, now + length / (1 + i * 0.7));
+      osc.connect(gain);
+      gain.connect(master);
+      osc.start(now);
+      osc.stop(now + length + 0.1);
+      return osc;
+    });
+    voices.push({ master, oscillators });
+  } catch (e) { /* audio unavailable */ }
+}
+
+
+/* 8. QUIZ FLOW ------------------------------------------------------------ */
+
+function buildAnswerButtons() {
+  $("answers").innerHTML = LETTERS
+    .map(l => `<button data-l="${l}" disabled><span>${l}</span><small>${l.toLowerCase()}</small></button>`)
+    .join("");
+  answerButtons().forEach(b => { b.onclick = () => answer(b.dataset.l); });
+}
+
+/* Label the buttons with the note names (letters or Do Re Mi) plus the
+   current question's accidental, so it never has to be chosen separately. */
+function relabelAnswers() {
+  answerButtons().forEach(b => {
+    b.querySelector("span").textContent = displayName(b.dataset.l) + accSymbol(state.note.acc);
+  });
+}
+
+function setFeedback(text, kind = "") {
+  $("msg").textContent = text;
+  $("msg").className = "msg " + kind;
+}
+
+function nextQuestion() {
+  clearTimeout(advanceTimer);
+  state.note = pickNote();
+  state.lastKey = noteKey(state.note.d, state.note.acc);
+  state.locked = !state.running;
+
+  drawStaff(state.note.d, state.note.acc);
+  relabelAnswers();
+  setFeedback("");
+  answerButtons().forEach(b => { b.className = ""; b.disabled = !state.running; });
+
+  state.startedAt = performance.now();
+  $("time").textContent = "0.0s";
+  if (state.running) play(midiNumber(state.note.d, state.note.acc));
+}
+
+/* Handle an answer. `midiResult` is only given for MIDI input, which already
+   knows whether the played key was right (and makes its own sound). */
+function answer(letter, midiResult) {
+  if (!state.running || state.locked) return;
+  const fromMidi = midiResult !== undefined;
+  if (!fromMidi) play(nearestPitch(letter, state.note.acc));
+  state.locked = true;
+
+  const { d, acc } = state.note;
+  const correct = fromMidi ? midiResult : letter === letterOf(d);
+  const key = noteKey(d, acc);
+
+  session.notes++;
+  session.times.push((performance.now() - state.startedAt) / 1000);
+
+  /* Show the right answer in green and a wrong choice in red. */
+  answerButtons().forEach(b => {
+    b.disabled = true;
+    if (b.dataset.l === letterOf(d)) b.classList.add("ok");
+    if (b.dataset.l === letter && !correct) b.classList.add("bad");
+  });
+
+  if (correct) {
+    session.correct++;
+    session.streak++;
+    session.best = Math.max(session.best, session.streak);
+    weights[key] = Math.max(0.3, weightOf(d, acc) * 0.7);          // appears less often
+    setFeedback("Correct", "ok");
+  } else {
+    session.streak = 0;
+    weights[key] = Math.min(12, weightOf(d, acc) * 2 + 1);         // appears more often
+    setFeedback(`That was ${noteName(d, acc)}. It will come back more often.`, "bad");
+  }
+
+  writeStore("sr-weights", JSON.stringify(weights));
+  renderStats();
+  advanceTimer = setTimeout(nextQuestion, correct ? NEXT_DELAY.right : NEXT_DELAY.wrong);
+}
+
+
+/* 9. STATISTICS ----------------------------------------------------------- */
+
+function renderStats() {
+  const s = session;
+  $("s-n").textContent = s.notes;
+  $("s-acc").textContent = s.notes ? Math.round((s.correct / s.notes) * 100) + "%" : "100%";
+  $("s-avg").textContent = s.notes ? (s.times.reduce((a, b) => a + b, 0) / s.notes).toFixed(1) + "s" : "—";
+  $("s-cur").textContent = s.streak;
+  $("s-max").textContent = s.best;
+
+  $("a-count").textContent = STREAK_AWARDS.filter(([need]) => s.best >= need).length + "/4";
+  $("achs").innerHTML = STREAK_AWARDS.map(([need, title]) =>
+    `<div class="a ${s.best >= need ? "on" : ""}"><i>${need}</i>` +
+    `<div><b>${title}</b><small>${need} streak</small></div></div>`
+  ).join("");
+}
+
+
+/* 10. CONTROLS AND KEYBOARD ----------------------------------------------- */
+
+function setClef(clef) {
+  state.clef = clef;
+  state.lastKey = null;
+  $("c-treble").setAttribute("aria-pressed", clef === "treble");
+  $("c-bass").setAttribute("aria-pressed", clef === "bass");
+  $("kicker").textContent = "Note reading · " + CLEFS[clef].name + " clef";
+  nextQuestion();
+}
+
+function setSolfege(on) {
+  state.solfege = on;
+  $("sol").setAttribute("aria-pressed", on);
+  $("answers").classList.toggle("sol", on);        // smaller text so "Sol♯" fits
+  relabelAnswers();
+}
+
+function updateClock() {
+  if (!state.locked) {
+    $("time").textContent = ((performance.now() - state.startedAt) / 1000).toFixed(1) + "s";
+  }
+}
+
+$("c-treble").onclick = () => setClef("treble");
+$("c-bass").onclick = () => setClef("bass");
+$("hear").onclick = () => play(midiNumber(state.note.d, state.note.acc));
+
+$("start").onclick = () => {
+  state.running = !state.running;
+  $("start").dataset.on = state.running;
+  $("start").innerHTML = state.running ? "■&nbsp; Stop practice" : "▷&nbsp; Start practice";
+  clearInterval(clockTimer);
+  if (state.running) {
+    session = newSession();                         // each run starts a fresh session
+    renderStats();
+    clockTimer = setInterval(updateClock, 100);
+  }
+  nextQuestion();
+};
+
+$("acc-tog").onclick = () => {
+  state.accidentals = !state.accidentals;
+  $("acc-tog").setAttribute("aria-pressed", state.accidentals);
+  state.lastKey = null;
+  nextQuestion();
+};
+
+$("sol").onclick = () => {
+  setSolfege(!state.solfege);
+  writeStore("sr-sol", state.solfege ? "1" : "");
+};
+
+$("reset").onclick = () => {
+  session = newSession();
+  renderStats();
+  if (state.running) nextQuestion();
+};
+
+/* Keyboard: a letter answers; Enter or Space skips the feedback delay. */
+document.addEventListener("keydown", e => {
+  if (e.ctrlKey || e.metaKey || e.altKey) return;
+  const letter = e.key.toUpperCase();
+  if (LETTERS.includes(letter) && e.key.length === 1) {
+    answer(letter);
+  } else if ((e.key === "Enter" || e.key === " ") && state.running && state.locked &&
+             document.activeElement.tagName !== "BUTTON") {
+    e.preventDefault();
+    nextQuestion();
+  }
+});
+
+
+/* 11. MIDI INPUT ---------------------------------------------------------- */
+/* Any octave counts, and a black key matches either spelling (C♯ = D♭). */
+
+function onMidiMessage(e) {
+  const [status, key, velocity] = e.data;
+  const noteOn = (status & 0xf0) === 0x90 && velocity > 0;
+  if (!noteOn || !state.running || state.locked) return;
+
+  const { d, acc } = state.note;
+  const pitchClass = key % 12;
+  const spelling = acc < 0 ? PITCH_FLATS : PITCH_SHARPS;         // match the question's spelling
+  answer(spelling[pitchClass][0], pitchClass === midiNumber(d, acc) % 12);
+}
+
+async function connectMidi() {
+  const status = $("midi-st");
+  try {
+    if (!navigator.requestMIDIAccess) throw 0;
+    const access = await navigator.requestMIDIAccess();
+
+    const listen = () => {                                       // runs again when devices change
+      const inputs = [...access.inputs.values()];
+      inputs.forEach(input => { input.onmidimessage = onMidiMessage; });
+      status.textContent = inputs.length
+        ? "MIDI: " + inputs.map(i => i.name).join(", ")
+        : "MIDI ready, no keyboard found";
+    };
+    access.onstatechange = listen;
+    listen();
+    $("midi").setAttribute("aria-pressed", true);
+  } catch (e) {
+    const embedded = window.self !== window.top;
+    const reason = e && e.name ? ` (${e.name})`
+                 : !navigator.requestMIDIAccess ? " (not supported by this browser)" : "";
+    status.textContent = "MIDI unavailable" + reason + (embedded
+      ? ". This page is embedded, so the browser blocks MIDI. Open it in its own tab."
+      : ". Check this site's MIDI permission in the browser.");
+  }
+}
+$("midi").onclick = connectMidi;
+
+
+/* 12. STARTUP ------------------------------------------------------------- */
+
+try { weights = JSON.parse(readStore("sr-weights") || "{}"); } catch (e) { weights = {}; }
+
+buildAnswerButtons();
+renderStats();
+setSolfege(readStore("sr-sol") === "1");
+nextQuestion();
+
+/* Redraw once the music font has loaded so the clef is measured correctly. */
+if (document.fonts) {
+  document.fonts.load("100px 'Noto Music'", "𝄞𝄢♯♭")
+    .then(() => drawStaff(state.note.d, state.note.acc))
+    .catch(() => {});
+}
+</script>
+</body>
+</html>
