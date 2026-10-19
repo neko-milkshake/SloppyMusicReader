@@ -1,4 +1,4 @@
-SloppyMusicReader is an AI generated web app to help musicians
+SloppyMusicReader is an AI assisted web app to help musicians
 practice reading musical notation.
 
 https://neko-milkshake.github.io/SloppyMusicReader/
